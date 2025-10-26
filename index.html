@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Uyizlang - Uylar Xaritasi</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        #map {
+            height: 100vh;
+            width: 100%;
+        }
+        .custom-popup {
+            max-width: 350px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .popup-title {
+            font-weight: 700;
+            font-size: 18px;
+            margin-bottom: 8px;
+            color: #2c3e50;
+            line-height: 1.3;
+        }
+        .popup-details {
+            font-size: 14px;
+            color: #5d6d7e;
+            margin-bottom: 12px;
+            line-height: 1.4;
+        }
+        .popup-price {
+            font-size: 22px;
+            font-weight: 700;
+            color: #e74c3c;
+            margin-bottom: 15px;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+        .popup-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 12px;
+        }
+        .popup-button {
+            padding: 10px 16px;
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);
+        }
+        .popup-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.4);
+        }
+        .popup-button.details {
+            background: linear-gradient(135deg, #27ae60, #219a52);
+            box-shadow: 0 2px 8px rgba(39, 174, 96, 0.3);
+        }
+        .popup-button.details:hover {
+            box-shadow: 0 4px 15px rgba(39, 174, 96, 0.4);
+        }
+        .popup-button.phone {
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+            box-shadow: 0 2px 8px rgba(46, 204, 113, 0.3);
+        }
+        .popup-button.phone:hover {
+            box-shadow: 0 4px 15px rgba(46, 204, 113, 0.4);
+        }
+        .map-controls {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 12px;
+            border-radius: 12px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+            backdrop-filter: blur(10px);
+        }
+        .legend {
+            position: absolute;
+            bottom: 20px;
+            left: 15px;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+            font-size: 13px;
+            font-weight: 600;
+            backdrop-filter: blur(10px);
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .legend-color {
+            width: 22px;
+            height: 22px;
+            margin-right: 10px;
+            border-radius: 50%;
+            border: 3px solid white;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.85);
+            backdrop-filter: blur(5px);
+        }
+        .modal-content {
+            background: linear-gradient(135deg, #ffffff, #f8f9fa);
+            margin: 3% auto;
+            padding: 25px;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .close {
+            color: #7f8c8d;
+            float: right;
+            font-size: 30px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+        .close:hover {
+            color: #e74c3c;
+        }
+        .listing-images {
+            display: flex;
+            gap: 12px;
+            margin: 20px 0;
+            overflow-x: auto;
+            padding: 12px 0;
+        }
+        .listing-image {
+            width: 140px;
+            height: 105px;
+            object-fit: cover;
+            border-radius: 10px;
+            border: 3px solid #e8e8e8;
+            transition: transform 0.3s, border-color 0.3s;
+            cursor: pointer;
+        }
+        .listing-image:hover {
+            transform: scale(1.05);
+            border-color: #3498db;
+        }
+        .phone-link {
+            display: inline-block;
+            padding: 15px 25px;
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+            color: white;
+            text-decoration: none;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: 700;
+            margin: 15px 0;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(46, 204, 113, 0.4);
+            text-align: center;
+        }
+        .phone-link:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(46, 204, 113, 0.6);
+        }
+        .details-section {
+            margin: 20px 0;
+            padding: 18px;
+            background: linear-gradient(135deg, #f8f9fa, #e8f4f8);
+            border-radius: 12px;
+            border-left: 4px solid #3498db;
+        }
+        .detail-item {
+            margin: 10px 0;
+            font-size: 15px;
+            display: flex;
+            align-items: center;
+        }
+        .detail-label {
+            font-weight: 700;
+            color: #2c3e50;
+            min-width: 80px;
+        }
+        .detail-value {
+            color: #5d6d7e;
+            flex: 1;
+        }
+        #loading {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 3000;
+            background: rgba(255,255,255,0.95);
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+            text-align: center;
+        }
+        .status-bar {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 10px 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+            font-size: 12px;
+            font-weight: 600;
+            backdrop-filter: blur(10px);
+        }
+        .status-online {
+            color: #27ae60;
+        }
+        .status-offline {
+            color: #e74c3c;
+        }
+        .filter-controls {
+            position: absolute;
+            top: 15px;
+            right: 150px;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 12px;
+            border-radius: 12px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+            backdrop-filter: blur(10px);
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            max-width: 300px;
+        }
+        .filter-select {
+            padding: 8px 12px;
+            border: 2px solid #e8e8e8;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            background: white;
+            color: #2c3e50;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 120px;
+        }
+        .filter-select:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    
+    <!-- Status bar -->
+    <div class="status-bar">
+        <span id="statusText">🔄 Yuklanmoqda...</span>
+    </div>
+    
+    <!-- Filter controls -->
+    <div class="filter-controls">
+        <select id="roomFilter" class="filter-select" onchange="filterListings()">
+            <option value="">🏠 Xonalar</option>
+            <option value="1">1 xonali</option>
+            <option value="2">2 xonali</option>
+            <option value="3">3 xonali</option>
+            <option value="4">4+ xonali</option>
+        </select>
+        <select id="priceFilter" class="filter-select" onchange="filterListings()">
+            <option value="">💰 Narx</option>
+            <option value="50000">$50,000 gacha</option>
+            <option value="100000">$100,000 gacha</option>
+            <option value="150000">$150,000 gacha</option>
+            <option value="200000">$200,000+</option>
+        </select>
+    </div>
+    
+    <div class="map-controls">
+        <button onclick="locateUser()" class="popup-button">
+            <i class="fas fa-location-arrow"></i> Mening joylashuvim
+        </button>
+        <button onclick="refreshListings()" class="popup-button" style="margin-top: 8px;">
+            <i class="fas fa-sync-alt"></i> Yangilash
+        </button>
+        <button onclick="clearFilters()" class="popup-button" style="margin-top: 8px; background: linear-gradient(135deg, #e74c3c, #c0392b);">
+            <i class="fas fa-times"></i> Filterni tozalash
+        </button>
+    </div>
+    
+    <div class="legend">
+        <div class="legend-item">
+            <div class="legend-color" style="background: linear-gradient(135deg, #e74c3c, #c0392b);"></div>
+            <span>Yangi e'lon (24 soat)</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: linear-gradient(135deg, #3498db, #2980b9);"></div>
+            <span>Eski e'lonlar</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: linear-gradient(135deg, #f39c12, #e67e22);"></div>
+            <span>Yaqin atrofdagilar</span>
+        </div>
+    </div>
+
+    <!-- Loading indicator -->
+    <div id="loading">
+        <i class="fas fa-spinner fa-spin" style="font-size: 30px; color: #3498db; margin-bottom: 10px;"></i>
+        <p style="margin: 0; font-weight: bold; color: #2c3e50;">E'lonlar yuklanmoqda...</p>
+    </div>
+
+    <!-- Modal oyna -->
+    <div id="listingModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <div id="modalContent"></div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+    <script>
+        // API URL - production uchun moslashtirilgan
+        const API_BASE_URL = window.location.hostname === 'localhost' 
+            ? 'http://localhost:5000/api' 
+            : '/api';
+
+        // Xaritani yaratish
+        const map = L.map('map', {
+            zoomControl: true,
+            preferCanvas: true
+        }).setView([41.311081, 69.240562], 12);
+
+        // Xarita qatlami
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors',
+            maxZoom: 20,
+            detectRetina: true
+        }).addTo(map);
+
+        // Global o'zgaruvchilar
+        let userLocation = null;
+        const markers = L.layerGroup().addTo(map);
+        let allListings = [];
+        let filteredListings = [];
+
+        // Status yangilash
+        function updateStatus(message, isOnline = true) {
+            const statusElement = document.getElementById('statusText');
+            statusElement.innerHTML = isOnline ? 
+                `🟢 ${message}` : 
+                `🔴 ${message}`;
+            statusElement.className = isOnline ? 'status-online' : 'status-offline';
+        }
+
+        // Loading ko'rsatkichini ko'rsatish/yashirish
+        function showLoading() {
+            document.getElementById('loading').style.display = 'block';
+        }
+
+        function hideLoading() {
+            document.getElementById('loading').style.display = 'none';
+        }
+
+        // Backend dan e'lonlarni yuklash (yaxshilangan)
+        async function loadListingsFromBackend() {
+            showLoading();
+            updateStatus('E\'lonlar yuklanmoqda...');
+            
+            try {
+                console.log('API ga so\'rov yuborilmoqda:', `${API_BASE_URL}/listings`);
+                
+                const response = await fetch(`${API_BASE_URL}/listings`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                console.log('Response status:', response.status);
+                
+                if (!response.ok) {
+                    throw new Error(`Server xatosi: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('API dan kelgan ma\'lumot:', data);
+                
+                if (data.success) {
+                    allListings = data.data;
+                    
+                    // Har bir e'londa location borligini tekshirish
+                    allListings.forEach((listing, index) => {
+                        if (!listing.location || !Array.isArray(listing.location)) {
+                            console.warn(`E'lon ${index} da location maydoni noto'g'ri:`, listing);
+                        }
+                        
+                        // Yangi e'lonlarni belgilash (24 soat)
+                        const listingDate = new Date(listing.created_at);
+                        const now = new Date();
+                        const hoursDiff = (now - listingDate) / (1000 * 60 * 60);
+                        listing.is_new = hoursDiff < 24;
+                    });
+                    
+                    console.log(`${allListings.length} ta e'lon yuklandi:`, allListings);
+                    updateStatus(`${allListings.length} ta e'lon yuklandi`, true);
+                    return allListings;
+                } else {
+                    throw new Error(data.error || 'Noma\'lum xato');
+                }
+            } catch (error) {
+                console.error('Yuklash xatosi:', error);
+                updateStatus(`Xato: ${error.message}`, false);
+                
+                // Fallback: namuna ma'lumotlarni ishlatish
+                console.log('Fallback: namuna ma\'lumotlar ishlatilmoqda');
+                const sampleListings = getSampleListings();
+                updateStatus(`${sampleListings.length} ta namuna e'lon yuklandi`, true);
+                return sampleListings;
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // Namuna ma'lumotlar (fallback) - yangilangan
+        function getSampleListings() {
+            const now = new Date();
+            const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+            const twoDaysAgo = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000);
+            
+            return [
+                {
+                    id: 1,
+                    title: "Olmazor tumanida Kvartira",
+                    description: "Holati zo'r, hamma sharoitlar bor, yangi ta'mir, metro yaqinida",
+                    price: 95000,
+                    price_display: "95,000 USD",
+                    rooms: 3,
+                    floor: "5/12",
+                    location: [41.311081, 69.240562],
+                    phone: "+998901234567",
+                    images: [
+                        'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=400&h=300&fit=crop',
+                        'https://images.unsplash.com/photo-1484154218962-a197022b5858?w=400&h=300&fit=crop'
+                    ],
+                    created_at: now.toISOString(),
+                    is_new: true
+                },
+                {
+                    id: 2,
+                    title: "Yunusobod tumanida Xovli",
+                    description: "Yangi ta'mir, 6 sotix, hovli, bog' bor",
+                    price: 120000,
+                    price_display: "120,000 USD",
+                    rooms: 4,
+                    floor: "1/1",
+                    location: [41.351081, 69.280562],
+                    phone: "+998901234568",
+                    images: [
+                        'https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=400&h=300&fit=crop',
+                        'https://images.unsplash.com/photo-1494526585095-c41746248156?w=400&h=300&fit=crop'
+                    ],
+                    created_at: twoDaysAgo.toISOString(),
+                    is_new: false
+                },
+                {
+                    id: 3,
+                    title: "Chilonzor tumanida Kvartira",
+                    description: "Markaziy, yangi ta'mir, mebel bilan",
+                    price: 85000,
+                    price_display: "85,000 USD",
+                    rooms: 2,
+                    floor: "3/9",
+                    location: [41.291081, 69.200562],
+                    phone: "+998901234569",
+                    images: [
+                        'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=400&h=300&fit=crop'
+                    ],
+                    created_at: yesterday.toISOString(),
+                    is_new: true
+                },
+                {
+                    id: 4,
+                    title: "Mirzo Ulug'bek tumanida Kvartira",
+                    description: "Yangi qurilish, 3 xonali, oshxona alohida",
+                    price: 75000,
+                    price_display: "75,000 USD",
+                    rooms: 3,
+                    floor: "7/16",
+                    location: [41.331081, 69.260562],
+                    phone: "+998901234570",
+                    images: [
+                        'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=400&h=300&fit=crop'
+                    ],
+                    created_at: twoDaysAgo.toISOString(),
+                    is_new: false
+                }
+            ];
+        }
+
+        // Modal oynani yopish
+        function closeModal() {
+            document.getElementById('listingModal').style.display = 'none';
+        }
+
+        // Modal oynani ochish
+        function showListingDetails(listing) {
+            const modalContent = document.getElementById('modalContent');
+            
+            const content = `
+                <h2 style="color: #2c3e50; margin-bottom: 20px; border-bottom: 3px solid #3498db; padding-bottom: 10px;">${listing.title}</h2>
+                
+                <div class="details-section">
+                    <div class="detail-item">
+                        <span class="detail-label">💰 Narx:</span>
+                        <span class="detail-value">${listing.price_display || listing.price}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">🏠 Xonalar:</span>
+                        <span class="detail-value">${listing.rooms} xonali</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">🏢 Qavat:</span>
+                        <span class="detail-value">${listing.floor}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">📅 Sana:</span>
+                        <span class="detail-value">${new Date(listing.created_at).toLocaleDateString('uz-UZ')}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">📝 Tavsif:</span>
+                        <span class="detail-value">${listing.description}</span>
+                    </div>
+                </div>
+
+                <div style="margin: 20px 0;">
+                    <h3 style="color: #2c3e50; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+                        <i class="fas fa-images" style="color: #3498db;"></i>
+                        Uy rasmlari
+                    </h3>
+                    <div class="listing-images">
+                        ${listing.images && listing.images.length > 0 ? 
+                            listing.images.map(img => 
+                                `<img src="${img}" alt="Uy rasmi" class="listing-image" onclick="window.open('${img}', '_blank')">`
+                            ).join('') :
+                            '<p style="color: #7f8c8d; text-align: center;">Rasmlar mavjud emas</p>'
+                        }
+                    </div>
+                </div>
+
+                <div style="text-align: center; margin: 25px 0;">
+                    <a href="tel:${listing.phone}" class="phone-link">
+                        <i class="fas fa-phone"></i> ${listing.phone} ga qo'ng'iroq qilish
+                    </a>
+                </div>
+
+                <div class="popup-buttons">
+                    <a href="https://maps.google.com/?q=${listing.location[0]},${listing.location[1]}" 
+                       target="_blank" class="popup-button">
+                        <i class="fab fa-google"></i> Google Maps
+                    </a>
+                    <a href="https://yandex.com/maps/?pt=${listing.location[1]},${listing.location[0]}&z=15" 
+                       target="_blank" class="popup-button">
+                        <i class="fas fa-map"></i> Yandex Maps
+                    </a>
+                </div>
+            `;
+            
+            modalContent.innerHTML = content;
+            document.getElementById('listingModal').style.display = 'block';
+        }
+
+        // Marker ranglarini belgilash
+        function getMarkerColor(listing) {
+            if (listing.is_new) {
+                return 'linear-gradient(135deg, #e74c3c, #c0392b)';
+            }
+            
+            if (userLocation) {
+                const distance = calculateDistance(
+                    userLocation.lat, 
+                    userLocation.lng, 
+                    listing.location[0], 
+                    listing.location[1]
+                );
+                
+                if (distance < 5) {
+                    return 'linear-gradient(135deg, #f39c12, #e67e22)';
+                }
+            }
+            
+            return 'linear-gradient(135deg, #3498db, #2980b9)';
+        }
+
+        // Masofa hisoblash (km)
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371;
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = 
+                Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+                Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+
+        // Marker yaratish (yaxshilangan)
+        function createMarker(listing) {
+            // Location ni tekshirish
+            if (!listing.location || !Array.isArray(listing.location) || listing.location.length !== 2) {
+                console.error('Noto\'g\'ri location:', listing);
+                return null;
+            }
+            
+            const [lat, lng] = listing.location;
+            
+            // Koordinatalarni tekshirish
+            if (typeof lat !== 'number' || typeof lng !== 'number' || 
+                lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+                console.error('Noto\'g\'ri koordinatalar:', listing);
+                return null;
+            }
+            
+            const color = getMarkerColor(listing);
+            
+            const markerIcon = L.divIcon({
+                className: 'custom-marker',
+                html: `<div style="
+                    background: ${color};
+                    width: 26px;
+                    height: 26px;
+                    border-radius: 50%;
+                    border: 4px solid white;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                    cursor: pointer;
+                    transition: transform 0.3s;
+                "></div>`,
+                iconSize: [26, 26],
+                iconAnchor: [13, 13]
+            });
+
+            // Popup content
+            const popupContent = `
+                <div class="custom-popup">
+                    <div class="popup-title">${listing.title}</div>
+                    <div class="popup-details">
+                        ${listing.rooms} xonali, ${listing.floor} qavat<br>
+                        ${listing.description}
+                    </div>
+                    <div class="popup-price">${listing.price_display || listing.price}</div>
+                    ${listing.is_new ? '<div style="background: #e74c3c; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; display: inline-block; margin-bottom: 10px;">YANGI</div>' : ''}
+                    <div class="popup-buttons">
+                        <button onclick="showListingDetails(${JSON.stringify(listing).replace(/'/g, "\\'")})" 
+                                class="popup-button details">
+                            <i class="fas fa-info-circle"></i> Batafsil
+                        </button>
+                        <a href="tel:${listing.phone}" class="popup-button phone">
+                            <i class="fas fa-phone"></i> Qo'ng'iroq
+                        </a>
+                    </div>
+                </div>
+            `;
+
+            const marker = L.marker([lat, lng], { 
+                icon: markerIcon,
+                riseOnHover: true
+            }).addTo(markers).bindPopup(popupContent);
+
+            marker.on('mouseover', function() {
+                this.openPopup();
+            });
+
+            return marker;
+        }
+
+        // E'lonlarni filtrlash
+        function filterListings() {
+            const roomFilter = document.getElementById('roomFilter').value;
+            const priceFilter = document.getElementById('priceFilter').value;
+            
+            filteredListings = allListings.filter(listing => {
+                let passRoomFilter = true;
+                let passPriceFilter = true;
+                
+                // Xonalar bo'yicha filtr
+                if (roomFilter) {
+                    if (roomFilter === '4') {
+                        passRoomFilter = listing.rooms >= 4;
+                    } else {
+                        passRoomFilter = listing.rooms === parseInt(roomFilter);
+                    }
+                }
+                
+                // Narx bo'yicha filtr
+                if (priceFilter) {
+                    passPriceFilter = listing.price <= parseInt(priceFilter);
+                }
+                
+                return passRoomFilter && passPriceFilter;
+            });
+            
+            addListingsToMap(filteredListings);
+            updateStatus(`${filteredListings.length} ta e'lon filtrlangan`, true);
+        }
+
+        // Filtrlarni tozalash
+        function clearFilters() {
+            document.getElementById('roomFilter').value = '';
+            document.getElementById('priceFilter').value = '';
+            filteredListings = [];
+            addListingsToMap(allListings);
+            updateStatus('Filtrlar tozalandi', true);
+        }
+
+        // Barcha e'lonlarni xaritaga qo'shish (yaxshilangan)
+        function addListingsToMap(listings = allListings) {
+            console.log('Xaritaga e\'lonlar qo\'shilmoqda:', listings.length);
+            
+            markers.clearLayers();
+            
+            if (listings.length === 0) {
+                console.log('Xaritaga qo\'shish uchun e\'lonlar topilmadi');
+                updateStatus('E\'lonlar topilmadi', false);
+                return;
+            }
+            
+            let addedMarkers = 0;
+            listings.forEach(listing => {
+                const marker = createMarker(listing);
+                if (marker) {
+                    addedMarkers++;
+                }
+            });
+            
+            console.log(`${addedMarkers} ta marker qo'shildi`);
+            
+            // Agar markerlar qo'shilsa, ularning markaziga o'tish
+            if (addedMarkers > 0) {
+                const markerLocations = listings
+                    .filter(l => l.location && Array.isArray(l.location) && l.location.length === 2)
+                    .map(l => L.marker(l.location));
+                    
+                if (markerLocations.length > 0) {
+                    const group = new L.featureGroup(markerLocations);
+                    map.fitBounds(group.getBounds().pad(0.1));
+                }
+                
+                updateStatus(`${addedMarkers} ta e'lon xaritada ko'rsatilmoqda`, true);
+            } else {
+                updateStatus('Hech qanday e\'lon xaritada ko\'rsatilmadi', false);
+            }
+        }
+
+        // E'lonlarni yangilash
+        async function refreshListings() {
+            await loadListingsFromBackend();
+            clearFilters();
+        }
+
+        // Foydalanuvchi joylashuvini aniqlash
+        function locateUser() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    position => {
+                        userLocation = {
+                            lat: position.coords.latitude,
+                            lng: position.coords.longitude
+                        };
+                        
+                        const userMarker = L.marker([userLocation.lat, userLocation.lng], {
+                            icon: L.divIcon({
+                                className: 'user-marker',
+                                html: `<div style="
+                                    background: linear-gradient(135deg, #9b59b6, #8e44ad);
+                                    width: 24px;
+                                    height: 24px;
+                                    border-radius: 50%;
+                                    border: 4px solid white;
+                                    box-shadow: 0 4px 12px rgba(155, 89, 182, 0.6);
+                                "></div>`,
+                                iconSize: [24, 24],
+                                iconAnchor: [12, 12]
+                            })
+                        }).addTo(map).bindPopup('📍 Sizning joylashuvingiz').openPopup();
+                            
+                        map.setView([userLocation.lat, userLocation.lng], 14);
+                        addListingsToMap(filteredListings.length > 0 ? filteredListings : allListings);
+                    },
+                    error => {
+                        alert('Joylashuvni aniqlashda xatolik: ' + error.message);
+                    }
+                );
+            } else {
+                alert('Brauzeringiz joylashuvni qo\'llab-quvvatlamaydi');
+            }
+        }
+
+        // Dastlabki yuklash
+        async function initializeMap() {
+            console.log('Xarita ishga tushmoqda...');
+            await loadListingsFromBackend();
+            addListingsToMap();
+        }
+
+        // Xarita yuklanganda ishga tushirish
+        map.whenReady(() => {
+            console.log('Xarita tayyor, e\'lonlar yuklanmoqda...');
+            initializeMap();
+        });
+
+        // Modal oynani tashqariga bosganda yopish
+        window.onclick = function(event) {
+            const modal = document.getElementById('listingModal');
+            if (event.target == modal) {
+                closeModal();
+            }
+        };
+
+        // Server holatini tekshirish
+        async function checkServerHealth() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/health`);
+                const data = await response.json();
+                console.log('Server holati:', data);
+            } catch (error) {
+                console.error('Server holatini tekshirishda xato:', error);
+            }
+        }
+
+        // Dastlabki tekshiruv
+        checkServerHealth();
+    </script>
+</body>
+</html>
